@@ -9,6 +9,7 @@ import (
 type Node interface {
 	TokenLiteral() string
 	String() string
+	Children() []Node
 }
 
 type Statement interface {
@@ -43,11 +44,25 @@ func (p *Program) TokenLiteral() string {
 	}
 }
 
+func (p *Program) Children() []Node {
+
+	nodes := make([]Node, len(p.Statements))
+	for i, s := range p.Statements {
+		nodes[i] = s
+	}
+
+	return nodes
+}
+
 // let name = value;
 type LetStatement struct {
 	Token token.Token // the token.LET token
 	Name  *Identifier
 	Value Expression
+}
+
+func (p *LetStatement) Children() []Node {
+	return []Node{p.Value}
 }
 
 func (ls *LetStatement) String() string {
@@ -72,6 +87,9 @@ type Identifier struct {
 	Value string
 }
 
+func (p *Identifier) Children() []Node {
+	return []Node{}
+}
 func (i *Identifier) String() string       { return i.Value }
 func (i *Identifier) expressionNode()      {}
 func (i *Identifier) TokenLiteral() string { return i.Token.Literal }
@@ -82,6 +100,9 @@ type ReturnStatement struct {
 	ReturnValue Expression
 }
 
+func (p *ReturnStatement) Children() []Node {
+	return []Node{p.ReturnValue}
+}
 func (rs *ReturnStatement) String() string {
 	var out bytes.Buffer
 
@@ -102,6 +123,9 @@ type ExpressionStatement struct {
 	Expression Expression
 }
 
+func (p *ExpressionStatement) Children() []Node {
+	return []Node{p.Expression}
+}
 func (es *ExpressionStatement) String() string {
 	if es.Expression != nil {
 		return es.Expression.String()
@@ -116,6 +140,9 @@ type IntegerLiteral struct {
 	Value int64
 }
 
+func (p *IntegerLiteral) Children() []Node {
+	return []Node{}
+}
 func (i *IntegerLiteral) String() string       { return i.Token.Literal }
 func (i *IntegerLiteral) expressionNode()      {}
 func (i *IntegerLiteral) TokenLiteral() string { return i.Token.Literal }
@@ -125,6 +152,9 @@ type StringLiteral struct {
 	Value string
 }
 
+func (p *StringLiteral) Children() []Node {
+	return []Node{}
+}
 func (i *StringLiteral) String() string       { return i.Token.Literal }
 func (i *StringLiteral) expressionNode()      {}
 func (i *StringLiteral) TokenLiteral() string { return i.Token.Literal }
@@ -135,6 +165,9 @@ type PrefixExpression struct {
 	Right    Expression
 }
 
+func (p *PrefixExpression) Children() []Node {
+	return []Node{p.Right}
+}
 func (pe *PrefixExpression) expressionNode()      {}
 func (pe *PrefixExpression) TokenLiteral() string { return pe.Token.Literal }
 func (pe *PrefixExpression) String() string {
@@ -155,6 +188,9 @@ type InfixExpression struct {
 	Right    Expression
 }
 
+func (p *InfixExpression) Children() []Node {
+	return []Node{p.Left, p.Right}
+}
 func (ie *InfixExpression) expressionNode()      {}
 func (ie *InfixExpression) TokenLiteral() string { return ie.Token.Literal }
 func (ie *InfixExpression) String() string {
@@ -174,6 +210,9 @@ type Boolean struct {
 	Value bool
 }
 
+func (p *Boolean) Children() []Node {
+	return []Node{}
+}
 func (b *Boolean) expressionNode()      {}
 func (b *Boolean) TokenLiteral() string { return b.Token.Literal }
 func (b *Boolean) String() string       { return b.Token.Literal }
@@ -185,6 +224,9 @@ type IfExpression struct {
 	Alternative *BlockStatement
 }
 
+func (p *IfExpression) Children() []Node {
+	return []Node{p.Condition, p.Consequence, p.Alternative}
+}
 func (ie *IfExpression) expressionNode()      {}
 func (ie *IfExpression) TokenLiteral() string { return ie.Token.Literal }
 func (ie *IfExpression) String() string {
@@ -208,6 +250,14 @@ type BlockStatement struct {
 	Statements []Statement
 }
 
+func (p *BlockStatement) Children() []Node {
+	nodes := make([]Node, len(p.Statements))
+	for i, n := range p.Statements {
+		nodes[i] = n
+	}
+
+	return nodes
+}
 func (bs *BlockStatement) statementNode()       {}
 func (bs *BlockStatement) TokenLiteral() string { return bs.Token.Literal }
 func (bs *BlockStatement) String() string {
@@ -226,6 +276,9 @@ type FunctionLiteral struct {
 	Body       *BlockStatement
 }
 
+func (p *FunctionLiteral) Children() []Node {
+	return []Node{p.Body}
+}
 func (fl *FunctionLiteral) expressionNode()      {}
 func (fl *FunctionLiteral) TokenLiteral() string { return fl.Token.Literal }
 func (fl *FunctionLiteral) String() string {
@@ -251,6 +304,15 @@ type CallExpression struct {
 	Arguments []Expression
 }
 
+func (p *CallExpression) Children() []Node {
+	nodes := make([]Node, len(p.Arguments)+1)
+	nodes[0] = p.Function
+	for i, n := range p.Arguments {
+		nodes[i+1] = n
+	}
+
+	return nodes
+}
 func (ce *CallExpression) expressionNode()      {}
 func (ce *CallExpression) TokenLiteral() string { return ce.Token.Literal }
 func (ce *CallExpression) String() string {
@@ -274,6 +336,14 @@ type ArrayLiteral struct {
 	Elements []Expression
 }
 
+func (p *ArrayLiteral) Children() []Node {
+	nodes := make([]Node, len(p.Elements))
+	for i, n := range p.Elements {
+		nodes[i] = n
+	}
+
+	return nodes
+}
 func (al *ArrayLiteral) expressionNode()      {}
 func (al *ArrayLiteral) TokenLiteral() string { return al.Token.Literal }
 func (al *ArrayLiteral) String() string {
@@ -294,6 +364,9 @@ type IndexExpression struct {
 	Index Expression
 }
 
+func (p *IndexExpression) Children() []Node {
+	return []Node{p.Left, p.Index}
+}
 func (ie *IndexExpression) expressionNode()      {}
 func (ie *IndexExpression) TokenLiteral() string { return ie.Token.Literal }
 func (ie *IndexExpression) String() string {
@@ -313,6 +386,14 @@ type HashLiteral struct {
 	Pairs map[Expression]Expression
 }
 
+func (p *HashLiteral) Children() []Node {
+
+	nodes := []Node{}
+	for k, v := range p.Pairs {
+		nodes = append(nodes, k, v)
+	}
+	return nodes
+}
 func (hl *HashLiteral) expressionNode()      {}
 func (hl *HashLiteral) TokenLiteral() string { return hl.Token.Literal }
 func (hl *HashLiteral) String() string {
