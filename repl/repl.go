@@ -52,7 +52,7 @@ func Start(in io.Reader, out io.Writer) {
 			continue
 		}
 
-		PrintAST(program)
+		//PrintAST(program)
 
 		// evaluated := evaluator.Eval(program, env)
 
