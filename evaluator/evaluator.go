@@ -13,123 +13,12 @@ var (
 )
 
 var builtins = map[string]*object.Builtin{
-	"len": &object.Builtin{
-		Fn: func(args ...object.Object) object.Object {
-			if len(args) != 1 {
-				return newError("wrong number of arguments. got=%d, want=1",
-					len(args))
-			}
-			switch arg := args[0].(type) {
-			case *object.String:
-				return &object.Integer{Value: int64(len(arg.Value))}
-			case *object.Array:
-				return &object.Integer{Value: int64(len(arg.Elements))}
-			default:
-				return newError("argument to `len` not supported, got %s",
-					args[0].Type())
-			}
-		},
-	},
-	"first": &object.Builtin{
-		Fn: func(args ...object.Object) object.Object {
-			if len(args) != 1 {
-				return newError("wrong number of arguments. got=%d, want=1",
-					len(args))
-			}
-
-			switch arg := args[0].(type) {
-			case *object.Array:
-				if len(arg.Elements) == 0 {
-					return NULL
-				}
-
-				return arg.Elements[0]
-			default:
-				return newError("argument to `len` not supported, got %s",
-					args[0].Type())
-			}
-		},
-	},
-	"last": &object.Builtin{
-		Fn: func(args ...object.Object) object.Object {
-			if len(args) != 1 {
-				return newError("wrong number of arguments. got=%d, want=1",
-					len(args))
-			}
-
-			switch arg := args[0].(type) {
-			case *object.Array:
-				if len(arg.Elements) == 0 {
-					return NULL
-				}
-
-				return arg.Elements[len(arg.Elements)-1]
-			default:
-				return newError("argument to `len` not supported, got %s",
-					args[0].Type())
-			}
-		},
-	},
-	"rest": &object.Builtin{
-		Fn: func(args ...object.Object) object.Object {
-			if len(args) != 1 {
-				return newError("wrong number of arguments. got=%d, want=1",
-					len(args))
-			}
-
-			switch arg := args[0].(type) {
-			case *object.Array:
-				if len(arg.Elements) == 0 {
-					return NULL
-				}
-
-				rest := make([]object.Object, len(arg.Elements)-1, len(arg.Elements)-1)
-				copy(rest, arg.Elements[1:len(arg.Elements)])
-
-				return &object.Array{Elements: rest}
-			default:
-				return newError("argument to `len` not supported, got %s",
-					args[0].Type())
-			}
-		},
-	},
-	"push": &object.Builtin{
-		Fn: func(args ...object.Object) object.Object {
-			if len(args) < 2 {
-				return newError("wrong number of arguments. got=%d, want=min 2",
-					len(args))
-			}
-
-			switch arg := args[0].(type) {
-			case *object.Array:
-
-				newArr := make([]object.Object, len(arg.Elements)+len(args)-1)
-				copy(newArr, arg.Elements)
-				for i, toAdd := range args[1:] {
-					newArr[len(newArr)-(len(args)-1)+i] = toAdd
-				}
-
-				return &object.Array{Elements: newArr}
-			default:
-				return newError("argument to `len` not supported, got %s",
-					args[0].Type())
-			}
-		},
-	},
-	"puts": &object.Builtin{
-		Fn: func(args ...object.Object) object.Object {
-			if len(args) < 1 {
-				return newError("wrong number of arguments. got=%d, want=min 1",
-					len(args))
-			}
-
-			for _, arg := range args {
-				fmt.Println(arg.Inspect())
-			}
-
-			return NULL
-		},
-	},
+	"len":   object.GetBuiltinByName("len"),
+	"puts":  object.GetBuiltinByName("puts"),
+	"first": object.GetBuiltinByName("first"),
+	"last":  object.GetBuiltinByName("last"),
+	"rest":  object.GetBuiltinByName("rest"),
+	"push":  object.GetBuiltinByName("push"),
 }
 
 func Eval(node ast.Node, env *object.Environment) object.Object {
@@ -218,6 +107,7 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 		return evalIndexExpression(left, index)
 	case *ast.HashLiteral:
 		return evalHashLiteral(node, env)
+
 	}
 
 	return nil
@@ -296,7 +186,11 @@ func applyFunction(fn object.Object, args []object.Object) object.Object {
 		evaluated := Eval(fn.Body, extendedEnv)
 		return unwrapReturnValue(evaluated) // we need to unwrap to stop the execution of the current function
 	case *object.Builtin:
-		return fn.Fn(args...) // we don't unwrap because the object type is never object.ReturnValue
+		// we don't unwrap because the object type is never object.ReturnValue
+		if result := fn.Fn(args...); result != nil {
+			return result
+		}
+		return NULL
 	default:
 		return newError("not a function: %s", fn.Type())
 	}
